@@ -22,18 +22,10 @@ class SimulavrAdapter(object):
     return dev
     
   def doRun(self, n):
-    ct = self.__sc.GetCurrentTime
-    while ct() < n:
-      res = self.__sc.Step()
-      if res is not 0: return res
-    return 0
+    self.__sc.doRun(n)
       
   def doStep(self, stepcount = 1):
-    while stepcount > 0:
-      res = self.__sc.Step()
-      if res is not 0: return res
-      stepcount -= 1
-    return 0
+    self.__sc.doStep(stepcount)
     
   def getCurrentTime(self):
     return self.__sc.GetCurrentTime()

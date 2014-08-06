@@ -102,6 +102,27 @@ namespace std {
     bool untilCoreStepFinished = false;
     return $self->Step(untilCoreStepFinished);
   }
+
+  int doRun(SystemClockOffset untilTime) {
+    while ($self->GetCurrentTime() < untilTime) {
+      bool untilCoreStepFinished = false;
+      int res = $self->Step(untilCoreStepFinished);
+      if (res != 0)
+        return res;
+    }
+    return 0;
+  }
+
+  int doStep(unsigned long long stepcount) {
+    while (stepcount > 0) {
+      bool untilCoreStepFinished = false;
+      int res = $self->Step(untilCoreStepFinished);
+      if (res != 0)
+        return res;
+      stepcount--;
+    }
+    return 0;
+  }
 }
 
 %feature("director") Hardware;
@@ -180,8 +201,14 @@ namespace std {
 // hardware simulation
 %feature("director") SerialRxBasic;
 %feature("nodirector") SerialRxBasic::GetPin;
+%feature("nodirector") SerialRxBasic::PinStateHasChanged;
+%feature("nodirector") SerialRxBasic::GetPin;
+%feature("nodirector") SerialRxBasic::Step;
 %feature("director") SerialRxBuffered;
 %feature("nodirector") SerialRxBuffered::GetPin;
+%feature("nodirector") SerialRxBuffered::PinStateHasChanged;
+%feature("nodirector") SerialRxBuffered::GetPin;
+%feature("nodirector") SerialRxBuffered::Step;
 %include "ui/serialtx.h"
 %include "ui/serialrx.h"
 
