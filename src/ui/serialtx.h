@@ -52,9 +52,10 @@ class SerialTxBuffered: public SimulationMember {
         unsigned int maxBitCnt;
        
         bool receiveInHex;
+        bool verbose;
 
     public:
-        SerialTxBuffered();
+        SerialTxBuffered(bool verbose=true);
         void Reset();
         virtual ~SerialTxBuffered(){};
         void SetHexInput(bool newValue);
