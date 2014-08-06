@@ -553,6 +553,19 @@ HWUart::HWUart(AvrDevice *core,
     ubrrhi_reg(this, "UBRRHI",
                this, &HWUart::GetUbrrhi, &HWUart::SetUbrrhi)
 {
+    // set UDRE to avoid sending '\0' when the UART is enabled
+    // The real hardware doesn't send this '\0' byte (tested with
+    // an ATmega328).
+    //TODO I think the real behavior is like this:
+    //     a) UDRE is initialized as 0.
+    //     b) UART handles the first byte before TXEN is set,
+    //        i.e. it is ignored.
+    //     If this is the behavior of the real hardware, we should
+    //     implement it like this, as this will yields a different
+    //     result, if UDR is set before the TXEN bit or TXEN is cleared
+    //     and set.
+    usr = (1<<UDRE);
+
     irqSystem->DebugVerifyInterruptVector(vectorRx, this);
     irqSystem->DebugVerifyInterruptVector(vectorUdre, this);
     irqSystem->DebugVerifyInterruptVector(vectorTx, this);
