@@ -119,6 +119,8 @@ void SystemConsoleHandler::TraceNextLine(void) {
         
         std::ostringstream n;
         int idx = traceFilename.rfind('.');
+        if (idx < 0)
+            idx = traceFilename.size();
         n << traceFilename.substr(0, idx) << "_" << traceFileCount << traceFilename.substr(idx);
         std::ofstream* os = new std::ofstream();
         os->open(n.str().c_str());
