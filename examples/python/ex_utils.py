@@ -10,14 +10,15 @@ class SimulavrAdapter(object):
 
   system_clock = property(lambda self: self.__sc)
   
-  def loadDevice(self, t, e):
+  def loadDevice(self, t, e, enable_gdb=False):
     self.__sc = pysimulavr.SystemClock.Instance()
     self.__sc.ResetClock()
     dev = pysimulavr.AvrFactory.instance().makeDevice(t)
     dev.Load(e)
     self.__elffile = e
     dev.SetClockFreq(self.__clock_period_ns)
-    self.__sc.Add(dev)
+    if not enable_gdb:
+      self.__sc.Add(dev)
     return dev
     
   def doRun(self, n):
