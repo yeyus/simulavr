@@ -388,7 +388,7 @@ unsigned int HWUart::CpuCycleTx() {
     //unsigned char usr_old=usr;
 
     baudCnt16++;
-    if(baudCnt16 >= 16) { // TODO: this isn't implemented right, baud clock prescaler is a down counter!
+    if(baudCnt16 >= (usr&U2X ? 8 : 16)) { // TODO: this isn't implemented right, baud clock prescaler is a down counter!
         baudCnt16 = 0;
 
         if (ucr & TXEN ) {  //transmitter enabled
