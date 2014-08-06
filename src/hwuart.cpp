@@ -204,7 +204,7 @@ unsigned int HWUart::CpuCycleRx() {
                 break;
 
             case RX_READ_STARTBIT:
-                cntRxSamples++;
+                cntRxSamples += (usr&U2X ? 2 : 1);
                 if (cntRxSamples>=8 && cntRxSamples<=10) {
                     if (pinRx==0) {
                         rxLowCnt++;
@@ -227,7 +227,7 @@ unsigned int HWUart::CpuCycleRx() {
                 break;
 
             case RX_READ_DATABIT:
-                cntRxSamples++;
+                cntRxSamples += (usr&U2X ? 2 : 1);
                 if (cntRxSamples>=8 && cntRxSamples<=10) {
                     if (pinRx==0) {
                         rxLowCnt++;
@@ -260,7 +260,7 @@ unsigned int HWUart::CpuCycleRx() {
                 break;
 
             case RX_READ_PARITY:
-                cntRxSamples++;
+                cntRxSamples += (usr&U2X ? 2 : 1);
                 if (cntRxSamples>=8 && cntRxSamples<=10) {
                     if (pinRx==0) {
                         rxLowCnt++;
@@ -293,7 +293,7 @@ unsigned int HWUart::CpuCycleRx() {
 
 
             case RX_READ_STOPBIT:
-                cntRxSamples++;
+                cntRxSamples += (usr&U2X ? 2 : 1);
                 if (cntRxSamples>=8 && cntRxSamples<=10) {
                     if (pinRx==0) {
                         rxLowCnt++;
@@ -341,7 +341,7 @@ unsigned int HWUart::CpuCycleRx() {
                 break;
 
             case RX_READ_STOPBIT2:
-                cntRxSamples++;
+                cntRxSamples += (usr&U2X ? 2 : 1);
                 if (cntRxSamples>=8 && cntRxSamples<=10) {
                     if (pinRx==0) {
                         rxLowCnt++;
