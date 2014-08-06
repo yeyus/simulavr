@@ -72,7 +72,7 @@ void HWUart::SetUdr(unsigned char val) {
 
 void HWUart::SetUsr(unsigned char val) { 
     unsigned char usrold=usr;
-    usr = val;
+    usr = val&~(TXC|UDRE) | usrold&(TXC|UDRE);
 
     unsigned char irqold= ucr & usrold;
     unsigned char irqnew= ucr & usr;
@@ -516,6 +516,31 @@ unsigned int HWUart::CpuCycleTx() {
             CheckForNewClearIrq(clearnew);
 
         } // end of tx enabled 
+        else
+            {
+                uint8_t old_usr = usr;
+
+                // This is the behavior observed on an ATmega328.
+                //TODO The ATmega328 updates this much more frequently (even instantly?).
+                usr |= (UDRE | TXC);
+
+                // Despite the UDRE bit always being set, the ATmega328
+                // will (sometimes?) send the last value of UDR,
+                // if any value has been set while the transmitter
+                // was disabled.
+
+                if (!(old_usr & UDRE) && (txState!=TX_FIRST_RUN)) { // there is new data in udr
+                    //shift data from udr->transmit shift register
+                    txDataTmp=udrWrite;
+                    if (ucr & TXB8) { // there is a 1 in txb8
+                        txDataTmp|=0x100; // this is bit 9 in the datastream
+                    }
+
+                    usr|=UDRE; // set UDRE, UDR is empty now
+                    usr&=0xff-TXC; // the transmitter is not ready
+                    txState=TX_SEND_STARTBIT;
+                }
+            }
     }   //end of 1 time baudrate
 
 
@@ -554,16 +579,6 @@ HWUart::HWUart(AvrDevice *core,
                this, &HWUart::GetUbrrhi, &HWUart::SetUbrrhi)
 {
     // set UDRE to avoid sending '\0' when the UART is enabled
-    // The real hardware doesn't send this '\0' byte (tested with
-    // an ATmega328).
-    //TODO I think the real behavior is like this:
-    //     a) UDRE is initialized as 0.
-    //     b) UART handles the first byte before TXEN is set,
-    //        i.e. it is ignored.
-    //     If this is the behavior of the real hardware, we should
-    //     implement it like this, as this will yields a different
-    //     result, if UDR is set before the TXEN bit or TXEN is cleared
-    //     and set.
     usr = (1<<UDRE);
 
     irqSystem->DebugVerifyInterruptVector(vectorRx, this);
