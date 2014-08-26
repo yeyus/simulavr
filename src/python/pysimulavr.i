@@ -21,7 +21,7 @@
   #include "pysimulationmember.h"
   #include "hwport.h"
   #include "hwstack.h"
-  
+
   // to get devices registered (automatically on linux, but necessary on windows)
   #include "atmega128.h"
   #include "at4433.h"
@@ -30,7 +30,15 @@
   #include "atmega16_32.h"
   #include "attiny2313.h"
   #include "attiny25_45_85.h"
-  
+
+  // hardware simulation
+  #include "ui/serialtx.h"
+  #include "ui/serialrx.h"
+
+  // debugging and tracing
+  #include "cmd/gdb.h"
+  #include "avrerror.h"
+
 %}
 
 %include "std_vector.i"
@@ -51,6 +59,10 @@ namespace std {
   } catch(int i) {
     PyErr_Format(PyExc_RuntimeError, "%d", i);
     return NULL;
+  } catch (Swig::DirectorException &e) {
+    //TODO wrap in Python exception
+    std::cerr << "Error in Python code (DirectorException): " << e.getMessage() << std::endl;
+    SWIG_fail;
   }
 }
 
@@ -89,6 +101,27 @@ namespace std {
   int Step() {
     bool untilCoreStepFinished = false;
     return $self->Step(untilCoreStepFinished);
+  }
+
+  int doRun(SystemClockOffset untilTime) {
+    while ($self->GetCurrentTime() < untilTime) {
+      bool untilCoreStepFinished = false;
+      int res = $self->Step(untilCoreStepFinished);
+      if (res != 0)
+        return res;
+    }
+    return 0;
+  }
+
+  int doStep(unsigned long long stepcount) {
+    while (stepcount > 0) {
+      bool untilCoreStepFinished = false;
+      int res = $self->Step(untilCoreStepFinished);
+      if (res != 0)
+        return res;
+      stepcount--;
+    }
+    return 0;
   }
 }
 
@@ -164,5 +197,23 @@ namespace std {
 %include "atmega16_32.h"
 %include "attiny2313.h"
 %include "attiny25_45_85.h"
+
+// hardware simulation
+%feature("director") SerialRxBasic;
+%feature("nodirector") SerialRxBasic::GetPin;
+%feature("nodirector") SerialRxBasic::PinStateHasChanged;
+%feature("nodirector") SerialRxBasic::GetPin;
+%feature("nodirector") SerialRxBasic::Step;
+%feature("director") SerialRxBuffered;
+%feature("nodirector") SerialRxBuffered::GetPin;
+%feature("nodirector") SerialRxBuffered::PinStateHasChanged;
+%feature("nodirector") SerialRxBuffered::GetPin;
+%feature("nodirector") SerialRxBuffered::Step;
+%include "ui/serialtx.h"
+%include "ui/serialrx.h"
+
+// debugging
+%include "cmd/gdb.h"
+%include "avrerror.h"
 
 // EOF

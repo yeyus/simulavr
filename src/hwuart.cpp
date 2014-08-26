@@ -72,7 +72,7 @@ void HWUart::SetUdr(unsigned char val) {
 
 void HWUart::SetUsr(unsigned char val) { 
     unsigned char usrold=usr;
-    usr = val;
+    usr = val&~(TXC|UDRE) | usrold&(TXC|UDRE);
 
     unsigned char irqold= ucr & usrold;
     unsigned char irqnew= ucr & usr;
@@ -204,7 +204,7 @@ unsigned int HWUart::CpuCycleRx() {
                 break;
 
             case RX_READ_STARTBIT:
-                cntRxSamples++;
+                cntRxSamples += (usr&U2X ? 2 : 1);
                 if (cntRxSamples>=8 && cntRxSamples<=10) {
                     if (pinRx==0) {
                         rxLowCnt++;
@@ -227,7 +227,7 @@ unsigned int HWUart::CpuCycleRx() {
                 break;
 
             case RX_READ_DATABIT:
-                cntRxSamples++;
+                cntRxSamples += (usr&U2X ? 2 : 1);
                 if (cntRxSamples>=8 && cntRxSamples<=10) {
                     if (pinRx==0) {
                         rxLowCnt++;
@@ -260,7 +260,7 @@ unsigned int HWUart::CpuCycleRx() {
                 break;
 
             case RX_READ_PARITY:
-                cntRxSamples++;
+                cntRxSamples += (usr&U2X ? 2 : 1);
                 if (cntRxSamples>=8 && cntRxSamples<=10) {
                     if (pinRx==0) {
                         rxLowCnt++;
@@ -293,7 +293,7 @@ unsigned int HWUart::CpuCycleRx() {
 
 
             case RX_READ_STOPBIT:
-                cntRxSamples++;
+                cntRxSamples += (usr&U2X ? 2 : 1);
                 if (cntRxSamples>=8 && cntRxSamples<=10) {
                     if (pinRx==0) {
                         rxLowCnt++;
@@ -341,7 +341,7 @@ unsigned int HWUart::CpuCycleRx() {
                 break;
 
             case RX_READ_STOPBIT2:
-                cntRxSamples++;
+                cntRxSamples += (usr&U2X ? 2 : 1);
                 if (cntRxSamples>=8 && cntRxSamples<=10) {
                     if (pinRx==0) {
                         rxLowCnt++;
@@ -388,7 +388,7 @@ unsigned int HWUart::CpuCycleTx() {
     //unsigned char usr_old=usr;
 
     baudCnt16++;
-    if(baudCnt16 >= 16) { // TODO: this isn't implemented right, baud clock prescaler is a down counter!
+    if(baudCnt16 >= (usr&U2X ? 8 : 16)) { // TODO: this isn't implemented right, baud clock prescaler is a down counter!
         baudCnt16 = 0;
 
         if (ucr & TXEN ) {  //transmitter enabled
@@ -516,6 +516,31 @@ unsigned int HWUart::CpuCycleTx() {
             CheckForNewClearIrq(clearnew);
 
         } // end of tx enabled 
+        else
+            {
+                uint8_t old_usr = usr;
+
+                // This is the behavior observed on an ATmega328.
+                //TODO The ATmega328 updates this much more frequently (even instantly?).
+                usr |= (UDRE | TXC);
+
+                // Despite the UDRE bit always being set, the ATmega328
+                // will (sometimes?) send the last value of UDR,
+                // if any value has been set while the transmitter
+                // was disabled.
+
+                if (!(old_usr & UDRE) && (txState!=TX_FIRST_RUN)) { // there is new data in udr
+                    //shift data from udr->transmit shift register
+                    txDataTmp=udrWrite;
+                    if (ucr & TXB8) { // there is a 1 in txb8
+                        txDataTmp|=0x100; // this is bit 9 in the datastream
+                    }
+
+                    usr|=UDRE; // set UDRE, UDR is empty now
+                    usr&=0xff-TXC; // the transmitter is not ready
+                    txState=TX_SEND_STARTBIT;
+                }
+            }
     }   //end of 1 time baudrate
 
 
@@ -553,6 +578,9 @@ HWUart::HWUart(AvrDevice *core,
     ubrrhi_reg(this, "UBRRHI",
                this, &HWUart::GetUbrrhi, &HWUart::SetUbrrhi)
 {
+    // set UDRE to avoid sending '\0' when the UART is enabled
+    usr = (1<<UDRE);
+
     irqSystem->DebugVerifyInterruptVector(vectorRx, this);
     irqSystem->DebugVerifyInterruptVector(vectorUdre, this);
     irqSystem->DebugVerifyInterruptVector(vectorTx, this);

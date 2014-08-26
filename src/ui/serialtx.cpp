@@ -3,7 +3,7 @@
  *
  * simulavr - A simulator for the Atmel AVR family of microcontrollers.
  * Copyright (C) 2001, 2002, 2003, 2004   Klaus Rudolph
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -30,9 +30,10 @@
 
 using namespace std;
 
-SerialTxBuffered::SerialTxBuffered()
+SerialTxBuffered::SerialTxBuffered(bool verbose)
 {
     allPins["tx"] = &tx;
+    this->verbose = verbose;
     Reset();
 }
 
@@ -42,7 +43,7 @@ void SerialTxBuffered::Reset()
     receiveInHex=false;
     baudrate=115200;
     maxBitCnt=8;
-    tx='H'; 
+    tx='H';
 }
 
 Pin* SerialTxBuffered::GetPin(const char* name)
@@ -107,7 +108,9 @@ void SerialTxBuffered::Send(unsigned char data)
 {
     inputBuffer.push_back(data); //write new char to input buffer
 
-    // cerr << "TX: " << hex << data << endl;
+    if (verbose)
+        cerr << "TX: " << hex << data << " ";
+
     //if we not active, activate tx machine now
     if (txState==TX_DISABLED) {
         txState=TX_SEND_STARTBIT;
@@ -160,7 +163,7 @@ int SerialTxFile::Step(bool &trueHwStep,
     if (Sending()) {
         SerialTxBuffered::Step(trueHwStep, timeToNextStepIn_ns);
     }
-    
+
 #ifndef WIN32
     pollfd cinfd[1];
     cinfd[0].fd = fd;
@@ -211,7 +214,7 @@ void SerialTx::SetNewValueFromUi(const string &s) {
         }
     } else {
         if (s == "__SPACE__")  { Send(' '); }
-        else 
+        else
         {
             for(unsigned int i=0; i < s.length(); i++)
             {
